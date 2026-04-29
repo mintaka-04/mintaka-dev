@@ -1,6 +1,6 @@
 baseURL = "https://mintaka-04.github.io/mintaka-dev/"
 languageCode = "ko-KR"
-title = "Vibe GitHubPage"
+title = "mintaka-dev"
 theme = "PaperMod"
 paginate = 10
 
