@@ -6,6 +6,7 @@
   python scripts/generate_post.py                        # 오늘 커밋 기반
   python scripts/generate_post.py --date 2026-04-28     # 특정 날짜
   python scripts/generate_post.py --repo moodot         # 다른 레포
+  python scripts/generate_post.py --til "EC2에 배포하며 배운 것들"  # TIL 초안
 """
 
 import os
@@ -133,11 +134,42 @@ def generate_troubleshooting(commits, repo, date_str):
         write_draft(f"{date_str}-{slug}-draft.md", message.content[0].text)
 
 
+def generate_til(topic, date_str):
+    print(f"TIL 초안 생성 중: {topic}")
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=2000,
+        system=(
+            "당신은 개발자가 오늘 배운 내용을 한국어 TIL 블로그 초안으로 작성합니다. "
+            "Hugo Markdown 형식으로 아래 frontmatter를 포함해서 작성하세요:\n"
+            "---\n"
+            "title: \"제목\"\n"
+            "date: 날짜\n"
+            "draft: true\n"
+            "categories: [\"til\"]\n"
+            "tags: []\n"
+            "---\n"
+            "내용은 오늘 배운 것 / 왜 배웠는지 / 핵심 정리 구조로 작성하세요. "
+            "이 글은 초안이므로 작성자가 나중에 직접 수정할 예정입니다."
+        ),
+        messages=[{"role": "user", "content": f"날짜: {date_str}\n주제: {topic}"}],
+    )
+
+    slug = slugify(topic)
+    write_draft(f"{date_str}-{slug}-til-draft.md", message.content[0].text)
+
+
 def main():
     parser = argparse.ArgumentParser(description="커밋 기반 블로그 초안 생성기")
     parser.add_argument("--repo", default="moodot_clone", help="대상 레포 이름")
     parser.add_argument("--date", default=datetime.now(KST).strftime("%Y-%m-%d"), help="날짜 (YYYY-MM-DD)")
+    parser.add_argument("--til", help="TIL 주제 (예: 'EC2에 배포하며 배운 것들')")
     args = parser.parse_args()
+
+    if args.til:
+        generate_til(args.til, args.date)
+        print("\n완료! content/drafts/ 폴더에서 초안을 확인하세요.")
+        return
 
     print(f"대상: {GITHUB_USER}/{args.repo} | 날짜: {args.date}")
     commits = fetch_commits(args.repo, args.date)
