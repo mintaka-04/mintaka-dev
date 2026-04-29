@@ -134,36 +134,29 @@ def generate_troubleshooting(commits, repo, date_str):
         write_draft(f"{date_str}-{slug}-draft.md", message.content[0].text)
 
 
-def generate_til(topic, date_str):
-    print(f"TIL 초안 생성 중: {topic}")
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2000,
-        system=(
-            "당신은 개발자가 오늘 배운 내용을 한국어 TIL 블로그 초안으로 작성합니다. "
-            "Hugo Markdown 형식으로 아래 frontmatter를 포함해서 작성하세요:\n"
-            "---\n"
-            "title: \"제목\"\n"
-            "date: 날짜\n"
-            "draft: true\n"
-            "categories: [\"til\"]\n"
-            "tags: []\n"
-            "---\n"
-            "내용은 오늘 배운 것 / 왜 배웠는지 / 핵심 정리 구조로 작성하세요. "
-            "이 글은 초안이므로 작성자가 나중에 직접 수정할 예정입니다."
-        ),
-        messages=[{"role": "user", "content": f"날짜: {date_str}\n주제: {topic}"}],
+def generate_til(todos, date_str):
+    todos_str = "\n".join(f"- {t}" for t in todos)
+    content = (
+        f"---\n"
+        f"title: \"{date_str} TIL\"\n"
+        f"date: {date_str}\n"
+        f"draft: true\n"
+        f"categories: [\"til\"]\n"
+        f"tags: []\n"
+        f"---\n\n"
+        f"## 오늘 할 일\n{todos_str}\n\n"
+        f"## 한 일\n\n\n"
+        f"## 배운 것\n"
     )
-
-    slug = slugify(topic)
-    write_draft(f"{date_str}-{slug}-til-draft.md", message.content[0].text)
+    write_draft(f"{date_str}-til-draft.md", content)
+    print("작성 후 '한 일'과 '배운 것' 섹션을 채워주세요.")
 
 
 def main():
     parser = argparse.ArgumentParser(description="커밋 기반 블로그 초안 생성기")
     parser.add_argument("--repo", default="moodot_clone", help="대상 레포 이름")
     parser.add_argument("--date", default=datetime.now(KST).strftime("%Y-%m-%d"), help="날짜 (YYYY-MM-DD)")
-    parser.add_argument("--til", help="TIL 주제 (예: 'EC2에 배포하며 배운 것들')")
+    parser.add_argument("--til", nargs="+", help="오늘 할 일 목록 (예: --til 'EC2 배포' 'CD 구성')")
     args = parser.parse_args()
 
     if args.til:
