@@ -1,0 +1,37 @@
+baseURL = "https://mintaka-04.github.io/vibe_githubpage/"
+languageCode = "ko-KR"
+title = "Vibe GitHubPage"
+theme = "PaperMod"
+paginate = 10
+
+[params]
+  env = "production"
+  author = "mintaka-04"
+  defaultTheme = "dark"
+  ShowReadingTime = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowShareButtons = false
+
+  [params.homeInfoParams]
+    Title = "개발 기록"
+    Content = "트러블슈팅과 개발 일지를 자동으로 기록합니다."
+
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
+[menu]
+  [[menu.main]]
+    name = "트러블슈팅"
+    url = "/categories/troubleshooting/"
+    weight = 1
+  [[menu.main]]
+    name = "개발일지"
+    url = "/categories/devlog/"
+    weight = 2
+  [[menu.main]]
+    name = "태그"
+    url = "/tags/"
+    weight = 3
