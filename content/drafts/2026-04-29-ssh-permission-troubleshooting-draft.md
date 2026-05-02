@@ -1,7 +1,7 @@
 ---
 title: "WSL에서 SSH 키 파일 권한 오류 (WARNING: UNPROTECTED PRIVATE KEY FILE)"
 date: 2026-04-29
-draft: true
+draft: false
 categories: ["troubleshooting"]
 tags: ["ssh", "wsl", "ec2", "aws", "permissions"]
 ---

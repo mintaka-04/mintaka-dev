@@ -1,7 +1,7 @@
 ---
 title: "GitHub Actions CD SSH 타임아웃 → SSM Session Manager 전환"
 date: 2026-05-02
-draft: true
+draft: false
 categories: ["devlog"]
 tags: ["github-actions", "ec2", "ssh", "ssm", "cd"]
 ---
@@ -67,8 +67,14 @@ EC2 안 SSM Agent → AWS 서버 (먼저 연결해둠)
 - 용도: EC2 → AWS SSM 서버 연결 (SSM Agent가 사용)
 - EC2 → 작업 → 보안 → IAM 역할 수정에서 EC2에 부착
 
-### 2. GitHub Actions용 IAM 역할 생성
-- 역할 이름: `moodot-github-actions-role`
+### 2. GitHub OIDC 제공자 등록
+
+**IAM → ID 제공업체 → 공급자 추가**
+- 공급자 유형: OpenID Connect
+- 공급자 URL: `https://token.actions.githubusercontent.com`
+- 대상: `sts.amazonaws.com`
+
+### 3. GitHub Actions용 IAM 역할 생성
 - 신뢰할 수 있는 엔티티 유형: **사용자 지정 신뢰 정책**
 - GitHub Actions는 AWS 외부 서비스라 기본 옵션에 없어서 직접 작성
 
@@ -86,7 +92,7 @@ EC2 안 SSM Agent → AWS 서버 (먼저 연결해둠)
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:mintaka-04/moodot_clone:ref:refs/heads/develop"
+          "token.actions.githubusercontent.com:sub": "repo:githubid/repository이름:ref:refs/heads/브랜치명"
         }
       }
     }
@@ -98,12 +104,12 @@ EC2 안 SSM Agent → AWS 서버 (먼저 연결해둠)
 - `Federated` — 외부 신원 제공자를 신뢰한다. 뒤의 값이 "그 신원 제공자가 누구인지"
 - `oidc-provider/token.actions.githubusercontent.com` — 내 AWS 계정에 등록된 GitHub OIDC 제공자
 - `AssumeRoleWithWebIdentity` — 외부(Web)에서 발급한 신원(Identity)으로 역할(Role)을 맡는(Assume) 행위
-- `sub` 조건 — mintaka-04/moodot_clone 레포의 develop 브랜치에서만 허용
+- `sub` 조건 — githubid/repository이름 레포의 develop 브랜치에서만 허용
 - `aud` 조건 — "이 토큰이 누구를 위해 발급된 건지" (sts.amazonaws.com = AWS용 토큰만 허용, 다른 서비스에 토큰 오용 방지)
 
 **전체 흐름:**
 ```
-GitHub Actions가 토큰 발급 (나 mintaka-04/moodot_clone의 GitHub Actions야)
+GitHub Actions가 토큰 발급
   → AWS가 확인 (GitHub OIDC 제공자가 보증한 거 맞네)
   → 역할 허용
   → SSM으로 EC2에 명령어 전송
@@ -116,23 +122,16 @@ GitHub Actions가 토큰 발급 (나 mintaka-04/moodot_clone의 GitHub Actions�
 GitHub Actions → (GitHub Actions용 역할로 인증) → AWS API → SSM → EC2 (EC2용 역할로 연결 유지)
 ```
 
-### 3. GitHub OIDC 제공자 등록
-
-**IAM → ID 제공업체 → 공급자 추가**
-- 공급자 유형: OpenID Connect
-- 공급자 URL: `https://token.actions.githubusercontent.com`
-- 대상: `sts.amazonaws.com`
-
 ### 4. GitHub Actions용 역할에 SSM 권한 추가
 
-**IAM → 역할 → `moodot-github-actions-role` → 권한 추가 → `AmazonSSMFullAccess`**
+**IAM → 역할 → `github에 대해 만들었던 역할` → 권한 추가 → `AmazonSSMFullAccess`**
 
 - 신뢰 정책: "GitHub Actions가 이 역할을 쓸 수 있다" (문 열어주는 것)
 - AmazonSSMFullAccess: "이 역할로 SSM 명령어를 보낼 수 있다" (문 열고 들어와서 할 수 있는 것)
 
 ### 5. GitHub Secrets 등록
 
-- `AWS_ROLE_ARN` — GitHub Actions용 IAM 역할 ARN (`moodot-github-actions-role`)
+- `AWS_ROLE_ARN` — GitHub Actions용 IAM 역할 ARN
 - `EC2_INSTANCE_ID` — EC2 인스턴스 ID (`i-xxxxxxxxxxxxxxxxx`)
 
 ### 6. cd.yml SSM 방식으로 수정
