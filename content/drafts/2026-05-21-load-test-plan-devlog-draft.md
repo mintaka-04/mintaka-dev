@@ -1,0 +1,63 @@
+---
+title: "부하 테스트 계획 — EC2 + Vercel 모니터링 전략"
+date: 2026-05-21
+draft: true
+categories: ["devlog"]
+tags: ["load-test", "ec2", "vercel", "cloudwatch", "monitoring"]
+---
+
+## 배경
+
+EC2 t3.micro + Docker 환경 구성 이후, ECS 전환 전에 현재 인프라의 한계를 확인하기 위해 부하 테스트를 진행할 예정이다.
+
+## 현재 인프라 스펙
+
+| 항목 | 값 |
+|------|-----|
+| 인스턴스 | t3.micro |
+| vCPU | 2 |
+| 메모리 | 1GB |
+| 디스크 | 8GB |
+| 워커 | Python AI 워커 (Docker 컨테이너) |
+
+## 모니터링 전략
+
+인프라 구조가 EC2와 Vercel로 나뉘어 있어 각각 다른 방식으로 성능을 판단한다.
+
+### EC2 — 리소스 기반
+
+EC2는 인프라에 직접 접근 가능하므로 리소스 지표로 성능을 판단한다.
+
+| 지표 | CloudWatch 경로 |
+|------|----------------|
+| CPU 사용률 | AWS/EC2 → CPUUtilization |
+| 메모리 사용률 | CWAgent → mem_used_percent |
+| 디스크 사용률 | CWAgent → disk_used_percent |
+
+### Vercel — 사용자 응답 기반
+
+Vercel은 관리형 플랫폼이라 서버 리소스에 직접 접근할 수 없다. 사용자 관점의 응답 지표로 성능을 판단한다.
+
+| 지표 | 설명 |
+|------|------|
+| 요청 수 | 단위 시간당 들어오는 요청 수 |
+| 응답 시간 | 요청 → 응답까지 걸리는 시간 |
+| 에러율 | 전체 요청 중 에러(4xx/5xx) 비율 |
+| 함수 실행 시간 | Serverless Function 처리 시간 (AI 워커 연동 지연 파악 가능) |
+
+## 예상 병목 지점
+
+- 메모리 1GB → Python 워커 + Docker 오버헤드로 여유 적음
+- Supabase Realtime WebSocket 동시 연결 수 증가 시 처리 지연 가능성
+
+## ECS 전환 판단 기준
+
+부하 테스트 결과가 아래 기준에 해당하면 ECS 도입을 진행한다.
+
+- CPU 지속 80% 이상
+- 메모리 부족으로 컨테이너 OOM 발생
+- 처리 지연으로 감정 이벤트 누락 발생
+
+## 테스트 방법
+
+(미정)
