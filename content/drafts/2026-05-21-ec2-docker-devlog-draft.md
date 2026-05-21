@@ -197,3 +197,24 @@ aws logs describe-log-groups --region ap-northeast-2
 에러 없이 목록이 나오면 권한이 있는 것이다.
 
 배포 후 CloudWatch 콘솔에서 `/moodot-clone/worker` 로그 그룹으로 로그가 들어오는지 확인한다.
+
+## 디스크 정리
+
+Docker 도입 후 디스크 사용량이 78.7%까지 올라갔다. `docker system df`로 확인하니 Docker 이미지가 1.2GB, 나머지는 Ubuntu OS, venv, apt 캐시 등이었다.
+
+apt 캐시와 AWS CLI 설치 파일을 정리하니 7% 확보됐다.
+
+```bash
+sudo apt-get clean
+rm -rf /tmp/aws /tmp/awscliv2.zip
+```
+
+Docker는 EC2에서 항상 `latest` 하나만 pull하는 구조라 이미지가 누적되지 않는다. ECR에는 SHA 태그로 버전이 쌓이지만 EC2 디스크엔 영향 없다.
+
+## CloudWatch 메모리 지표
+
+CloudWatch 기본(`AWS/EC2` 네임스페이스)에는 메모리 지표가 없다. CloudWatch agent가 수집한 지표는 `CWAgent` 네임스페이스에서 확인해야 한다.
+
+- CloudWatch → Metrics → All metrics → `CWAgent` → host → `mem_used_percent`
+
+agent 설정(`amazon-cloudwatch-agent.toml`)에 `mem`이 포함되어 있으면 별도 작업 없이 수집된다.
